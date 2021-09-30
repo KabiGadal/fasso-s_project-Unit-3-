@@ -1,6 +1,7 @@
 const express = require('express');
 const app =express();
-const path = require("path")
+const path = require("path");
+const session = require("express-session");
 
 const connect = require("../configs/db");
 const Signup = require("../models/signup.model");
@@ -8,6 +9,11 @@ const Signup = require("../models/signup.model");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(session({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: false,
+  }))
 
 const fooditemController = require("../controllers/fooditem.controller");
 const categoryItemController = require("../controllers/category.controller");
@@ -42,7 +48,7 @@ app.get("/index", (req, res) => {
 	}
 })
 
-app.get("/collections", async (req, res) => {
+app.get("/collections", async(req, res) => {
 	try {
 		res.render("collections");
 	} catch (err) {
@@ -52,7 +58,10 @@ app.get("/collections", async (req, res) => {
 
 app.get("/profile", async (req, res) => {
 	try {
-		res.render("profile");
+		const name =  req.session.user.Name;
+		const mobile = req.session.user.Phone;
+		const email = req.session.user.email;
+		res.render("profile",{name,mobile,email});
 	} catch (err) {
 		return res.status(400).json({ err: err.message });
 	}
@@ -62,6 +71,7 @@ app.get("/profile", async (req, res) => {
 app.get("/address", async (req, res) => {
 	try {
 		res.render("address");
+
 	} catch (err) {
 		return res.status(400).json({ err: err.message });
 	}
@@ -83,14 +93,17 @@ app.get("/payment", async (req, res) => {
 	}
 })
 
-app.get("/signup", (req, res) => {
 
-	res.render("signup") ;
+
+app.get("/signup", (req, res) => {
+	res.render("signup",{success : ''}) ;
 })
 
 app.post("/signup", async (req, res) => {
-		const registered = await Signup.create(req.body);
-		res.render("index");
+	const registered = await Signup.create(req.body);
+	setTimeout(() => {
+	res.render("index");	
+	},1000)
 
 })
 
@@ -105,11 +118,13 @@ app.post("/login", async (req, res) => {
 		const user = await Signup.findOne({ Phone: number });
 
 		if (user) {
-			console.log('user:', user)
-			res.render("collections");
+			req.session.user = user
+			res.redirect("/collections");
 		}
 
 	} catch (error) {
 		res.status(400).send("Not matched");
 	}
 })
+
+
